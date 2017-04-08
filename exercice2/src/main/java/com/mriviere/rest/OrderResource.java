@@ -2,12 +2,15 @@ package com.mriviere.rest;
 
 
 import com.mriviere.dto.OrderDto;
+import com.mriviere.dto.PriceResponseDto;
 import com.mriviere.dto.ProductOrderDto;
 import com.mriviere.jpa.repository.ClientRepository;
 import com.mriviere.jpa.repository.OrderRepository;
 import com.mriviere.jpa.repository.ProductDetailRepository;
 import com.mriviere.jpa.repository.ProductRepository;
+import com.mriviere.model.Client;
 import com.mriviere.model.Order;
+import com.mriviere.model.Product;
 import com.mriviere.model.ProductDetail;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,11 +49,12 @@ public class OrderResource {
     }
 
     @PostMapping
-    public void postOrder(@RequestBody OrderDto orderDto) throws Exception {
+    public PriceResponseDto postOrder(@RequestBody OrderDto orderDto) throws Exception {
         checkNotNull(orderDto, "Order must be not null");
         checkNotNull(orderDto.getClientId(), "Client id must be not null");
         checkNotNull(orderDto.getProductsOrdered(), "Products ordered must be not null");
-        checkArgument(clientRepository.getOne(orderDto.getClientId()) != null, "Client is not available");
+        Client client = clientRepository.getOne(orderDto.getClientId());
+        checkArgument(client != null, "Client is not available");
         orderDto.getProductsOrdered()
                 .forEach(product ->
                         checkArgument(productDetailRepository.findByProductId(product.getProductId()) != null,
@@ -61,10 +65,15 @@ public class OrderResource {
         computeNewStock(productsOrdered);
 
         Order order = new Order();
-        order.setClient(clientRepository.getOne(orderDto.getClientId()));
+        order.setClient(client);
+        Double price = 0D;
         for (ProductOrderDto productOrderDto : productsOrdered) {
-            order.addProduct(productRepository.findOne(productOrderDto.getProductId()));
+            Product product = productRepository.findOne(productOrderDto.getProductId());
+            order.addProduct(product);
+            price += product.getPrice() * productOrderDto.getQuantity();
         }
+
+        return new PriceResponseDto(price, client);
     }
 
     private void computeNewStock(List<ProductOrderDto> productsOrdered) {

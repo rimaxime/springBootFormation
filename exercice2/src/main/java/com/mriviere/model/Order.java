@@ -1,6 +1,9 @@
 package com.mriviere.model;
 
+import com.google.common.collect.Lists;
+
 import javax.persistence.*;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -18,7 +21,7 @@ public class Order {
 
     @ManyToMany
     @JoinColumn(name = "id", insertable = false, updatable = false)
-    private List<Product> products;
+    private List<Product> products = new ArrayList<>();
 
     public Order() {
     }
