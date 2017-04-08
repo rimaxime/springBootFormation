@@ -2,6 +2,7 @@ package com.mriviere.rest;
 
 
 import com.mriviere.dto.OrderDto;
+import com.mriviere.dto.ProductOrderDto;
 import com.mriviere.jpa.repository.ClientRepository;
 import com.mriviere.jpa.repository.OrderRepository;
 import com.mriviere.jpa.repository.ProductDetailRepository;
@@ -11,7 +12,9 @@ import com.mriviere.model.ProductDetail;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -44,29 +47,38 @@ public class OrderResource {
 
     @PostMapping
     public void postOrder(@RequestBody OrderDto orderDto) throws Exception {
-        Map<Long, Integer> productsOrdered = orderDto.getProductsOrdered();
+        checkNotNull(orderDto, "Order must be not null");
+        checkNotNull(orderDto.getClientId(), "Client id must be not null");
+        checkNotNull(orderDto.getProductsOrdered(), "Products ordered must be not null");
+        checkArgument(clientRepository.getOne(orderDto.getClientId()) != null, "Client is not available");
+        orderDto.getProductsOrdered()
+                .forEach(product ->
+                        checkArgument(productDetailRepository.findByProductId(product.getProductId()) != null,
+                                "Product " + product.getProductId() + " is not available"));
+
+        List<ProductOrderDto> productsOrdered = orderDto.getProductsOrdered();
         checkCommandConsistency(productsOrdered);
         computeNewStock(productsOrdered);
 
         Order order = new Order();
         order.setClient(clientRepository.getOne(orderDto.getClientId()));
-        for (Long productId : productsOrdered.keySet()) {
-            order.addProduct(productRepository.findOne(productId));
+        for (ProductOrderDto productOrderDto : productsOrdered) {
+            order.addProduct(productRepository.findOne(productOrderDto.getProductId()));
         }
     }
 
-    private void computeNewStock(Map<Long, Integer> productsOrdered) {
-        for (Long productId : productsOrdered.keySet()) {
-            ProductDetail productDetail = productDetailRepository.findByProductId(productId);
-            productDetail.setQuantity(productDetail.getQuantity() - productsOrdered.get(productId));
+    private void computeNewStock(List<ProductOrderDto> productsOrdered) {
+        for (ProductOrderDto productOrderDto : productsOrdered) {
+            ProductDetail productDetail = productDetailRepository.findByProductId(productOrderDto.getProductId());
+            productDetail.setQuantity(productDetail.getQuantity() - productOrderDto.getQuantity());
             productDetailRepository.save(productDetail);
         }
     }
 
-    private void checkCommandConsistency(Map<Long, Integer> productsOrdered) throws Exception {
-        for (Long productId : productsOrdered.keySet()) {
-            ProductDetail productDetail = productDetailRepository.findByProductId(productId);
-            if (productDetail.getQuantity() < productsOrdered.get(productId)) {
+    private void checkCommandConsistency(List<ProductOrderDto> productsOrdered) throws Exception {
+        for (ProductOrderDto productOrderDto : productsOrdered) {
+            ProductDetail productDetail = productDetailRepository.findByProductId(productOrderDto.getProductId());
+            if (productDetail.getQuantity() < productOrderDto.getQuantity()) {
                 throw new Exception("There is not enough quantity of: " + productDetail);
             }
         }

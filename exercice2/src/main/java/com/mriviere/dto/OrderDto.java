@@ -1,20 +1,21 @@
 package com.mriviere.dto;
 
+import java.util.List;
 import java.util.Map;
 
 /**
  * Created by rivie on 08/04/2017.
  */
 public class OrderDto {
-    private Map<Long, Integer> productsOrdered;
+    private List<ProductOrderDto> productsOrdered;
 
     private Long clientId;
 
-    public Map<Long, Integer> getProductsOrdered() {
+    public List<ProductOrderDto> getProductsOrdered() {
         return productsOrdered;
     }
 
-    public void setProductsOrdered(Map<Long, Integer> productsOrdered) {
+    public void setProductsOrdered(List<ProductOrderDto> productsOrdered) {
         this.productsOrdered = productsOrdered;
     }
 
@@ -29,7 +30,7 @@ public class OrderDto {
     public OrderDto() {
     }
 
-    public OrderDto(Map<Long, Integer> productsOrdered, Long clientId) {
+    public OrderDto(List<ProductOrderDto> productsOrdered, Long clientId) {
         this.productsOrdered = productsOrdered;
         this.clientId = clientId;
     }
